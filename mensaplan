@@ -1,0 +1,57 @@
+#!/usr/bin/env python
+import time
+import requests
+import argparse
+from lxml import html
+
+PAGE = "http://www.studierendenwerk-siegen.de/speiseplan_anzeigen.php"
+MENU = 6
+STAMM = 3
+EINTOPF = 4
+VEG = 5
+
+
+def get_menu(row_nr: int, tree) -> str:
+    """
+    Gibt das Angebot für das gewählte Menü zurück
+    :param row_nr: Das Menü
+    :param tree: Html des Speiseplans
+    :return: String mit dem Menü
+    """
+    xpath = '//*[@id="respTabs"]/div[3]/div/div[{}]/div[1]'.format(str(row_nr))
+    div = tree.xpath(xpath)[0]
+    out = ""
+    for elem in div:
+        if elem.tail:
+            out += elem.tail.strip()
+    return out
+
+parser = argparse.ArgumentParser(description='Uni Siegen Mensaplan')
+parser.add_argument('-m', default="-a", nargs=1, choices=["menu", "stamm", "eintopf", "vegetarisch"],
+                    help="Welches Angebot soll gezeigt werden (Default: Alle)")
+
+args = parser.parse_args()
+
+page = requests.get(PAGE)
+tree = html.fromstring(page.content)
+
+option = args.m[0]
+if not option == '-':
+    if option == "menu":
+        print(get_menu(MENU, tree))
+    if option == "stamm":
+        print(get_menu(STAMM, tree))
+    if option == "eintopf":
+        print(get_menu(EINTOPF, tree))
+    if option == "vegetarisch":
+        print(get_menu(VEG, tree))
+else:
+    print("Mensaplan der Uni Siegen für den {}:\n".format(time.strftime("%d.%m.%Y")))
+    print("Menü:")
+    print(get_menu(MENU, tree) + "\n")
+    print("Stammstisch:")
+    print(get_menu(STAMM, tree) + "\n")
+    print("Vegetarisches Menü:")
+    print(get_menu(VEG, tree) + "\n")
+    print("Eintopf:")
+    print(get_menu(EINTOPF, tree) + "\n")
