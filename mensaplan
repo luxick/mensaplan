@@ -1,7 +1,10 @@
 #!/usr/bin/env python
+import datetime
 import time
 import requests
 import argparse
+import re
+import json
 from lxml import html
 
 PAGE = "http://www.studierendenwerk-siegen.de/speiseplan_anzeigen.php"
@@ -11,47 +14,49 @@ EINTOPF = 4
 VEG = 5
 
 
-def get_menu(row_nr: int, tree) -> str:
+def get_menu(menu: int, day: int, tree) -> str:
     """
     Gibt das Angebot für das gewählte Menü zurück
-    :param row_nr: Das Menü
+    :param menu: Das Menü
+    :param day: Wochentag als Integer
     :param tree: Html des Speiseplans
     :return: String mit dem Menü
     """
-    xpath = '//*[@id="respTabs"]/div[3]/div/div[{}]/div[1]'.format(str(row_nr))
+    # Erster Wert nimmt den div für den Wochentag, der zweite bestimmt den div des Angebots
+    xpath = '//*[@id="respTabs"]/div[{}]/div/div[{}]/div[1]'.format(str(day), str(menu))
     div = tree.xpath(xpath)[0]
     out = ""
     for elem in div:
         if elem.tail:
-            out += elem.tail.strip()
-    return out
+            out += elem.tail.strip() + " "
+    return re.sub(' +',' ',out)
 
 parser = argparse.ArgumentParser(description='Uni Siegen Mensaplan')
-parser.add_argument('-m', default="-a", nargs=1, choices=["menu", "stamm", "eintopf", "vegetarisch"],
-                    help="Welches Angebot soll gezeigt werden (Default: Alle)")
+parser.add_argument('--json', action='store_const', const=1)
 
 args = parser.parse_args()
-
 page = requests.get(PAGE)
 tree = html.fromstring(page.content)
 
-option = args.m[0]
-if not option == '-':
-    if option == "menu":
-        print(get_menu(MENU, tree))
-    if option == "stamm":
-        print(get_menu(STAMM, tree))
-    if option == "eintopf":
-        print(get_menu(EINTOPF, tree))
-    if option == "vegetarisch":
-        print(get_menu(VEG, tree))
+# python weekday mit 0 startet, das die mensa Seite aber mit 1
+weekday = datetime.datetime.today().weekday() + 1
+
+if args.json == 1:
+    json_out = {
+        "menu": get_menu(MENU, weekday, tree),
+        "stamm": get_menu(STAMM, weekday, tree),
+        "veg": get_menu(VEG, weekday, tree),
+        "eintopf": get_menu(EINTOPF, weekday, tree)
+    }
+    print(json.dumps(json_out, indent=4))
 else:
     print("Mensaplan der Uni Siegen für den {}:\n".format(time.strftime("%d.%m.%Y")))
     print("Menü:")
-    print(get_menu(MENU, tree) + "\n")
+    print(get_menu(MENU, weekday, tree) + "\n")
     print("Stammstisch:")
-    print(get_menu(STAMM, tree) + "\n")
+    print(get_menu(STAMM, weekday, tree) + "\n")
     print("Vegetarisches Menü:")
-    print(get_menu(VEG, tree) + "\n")
+    print(get_menu(VEG, weekday, tree) + "\n")
     print("Eintopf:")
-    print(get_menu(EINTOPF, tree) + "\n")
+    print(get_menu(EINTOPF, weekday, tree) + "\n")
+

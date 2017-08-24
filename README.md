@@ -6,7 +6,7 @@ Zeigt den aktuellen Mensaplan der AR Mensa
 
 `$ mensaplan -h` zeigt einene Hilfetext
 
-`$ mensaplan -m {menu|stamm|eintopf|vegetarisch}` zeigt nur das jeweilige Angebot
+`$ mensaplan --json` gibt das angebot im JSON Format zurück
 
 # Abhänigkeiten
 - python3
